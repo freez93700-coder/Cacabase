@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+
+# Envoyer
+git add index.py
+git commit -m "Fix: Utiliser tabulations comme sC)parateur"
+git push#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import discord
@@ -9,14 +13,13 @@ import os
 from datetime import datetime
 
 # ==================== TOKEN DISCORD ====================
-TOKEN = os.getenv('DISCORD_TOKEN')  # <-- Important pour Render / GitHub
+TOKEN = os.getenv('DISCORD_TOKEN')
 
 # ==================== CHARGEMENT DU FICHIER ====================
 def load_data():
-    """Charge les données depuis message.txt dans le même dossier"""
+    """Charge les données depuis message.txt"""
     data = []
     
-    # Chemin du fichier dans le même dossier que le script
     script_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(script_dir, "message.txt")
     
@@ -32,35 +35,34 @@ def load_data():
             if not line:
                 continue
             
-            # Split par espaces multiples
-            parts = re.split(r'\s{2,}', line)
+            # === UTILISER TAB comme séparateur ===
+            parts = line.split('\t')
             parts = [p.strip() for p in parts if p.strip()]
             
-            if len(parts) < 6:
+            if len(parts) < 8:
                 continue
             
-            # Extraction
+            # Structure du fichier (avec tabulations) :
+            # 0: Coinbase, 1: Verified, 2: email, 3: nom, 4: adresse, 
+            # 5: ville état zip (ex: "FREDERICK MD 21702"), 6: pays, 7: téléphone
+            
             source = parts[0] if len(parts) > 0 else 'Coinbase'
             status = parts[1] if len(parts) > 1 else 'Verified'
             email = parts[2] if len(parts) > 2 else ''
             full_name = parts[3] if len(parts) > 3 else ''
             address = parts[4] if len(parts) > 4 else ''
             
-            if len(parts) >= 9:
-                city = parts[5] if len(parts) > 5 else ''
-                state = parts[6] if len(parts) > 6 else ''
-                zip_code = parts[7] if len(parts) > 7 else ''
-                country = parts[8] if len(parts) > 8 else 'United States'
-                phone = parts[9] if len(parts) > 9 else ''
-            else:
-                location = parts[5] if len(parts) > 5 else ''
-                country = parts[6] if len(parts) > 6 else 'United States'
-                phone = parts[7] if len(parts) > 7 else ''
-                
-                city = ''
-                state = ''
-                zip_code = ''
-                
+            # Extraire ville, état, zip depuis la colonne 5
+            location = parts[5] if len(parts) > 5 else ''
+            country = parts[6] if len(parts) > 6 else 'United States'
+            phone = parts[7] if len(parts) > 7 else ''
+            
+            city = ''
+            state = ''
+            zip_code = ''
+            
+            # Extraire ville, état, zip (ex: "FREDERICK MD 21702")
+            if location:
                 match = re.search(r'(.+?)\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)', location)
                 if match:
                     city = match.group(1).strip()
@@ -132,17 +134,17 @@ def create_embed(index, filtered_data, total_filtered, filter_name):
         timestamp=datetime.now()
     )
     
-    embed.add_field(name="📌 Source", value=entry.get('Source', 'N/A'), inline=True)
-    embed.add_field(name="✅ Status", value=entry.get('Status', 'N/A'), inline=True)
-    embed.add_field(name="👤 Nom", value=entry.get('Full_Name', 'N/A'), inline=True)
-    embed.add_field(name="📧 Email", value=entry.get('Email', 'N/A'), inline=True)
+    embed.add_field(name="📌 Source", value=entry.get('Source', 'N/A')[:50], inline=True)
+    embed.add_field(name="✅ Status", value=entry.get('Status', 'N/A')[:50], inline=True)
+    embed.add_field(name="👤 Nom", value=entry.get('Full_Name', 'N/A')[:50], inline=True)
+    embed.add_field(name="📧 Email", value=entry.get('Email', 'N/A')[:50], inline=True)
     embed.add_field(name="📧 Domaine", value=get_domain(entry.get('Email', '')), inline=True)
     embed.add_field(name="🏠 Adresse", value=entry.get('Address', 'N/A')[:100], inline=False)
-    embed.add_field(name="📍 Ville", value=entry.get('City', 'N/A'), inline=True)
-    embed.add_field(name="🏛️ État", value=entry.get('State', 'N/A'), inline=True)
-    embed.add_field(name="📮 Zip", value=entry.get('Zip', 'N/A'), inline=True)
-    embed.add_field(name="🌍 Pays", value=entry.get('Country', 'N/A'), inline=True)
-    embed.add_field(name="📞 Téléphone", value=entry.get('Phone', 'N/A'), inline=True)
+    embed.add_field(name="📍 Ville", value=entry.get('City', 'N/A')[:50], inline=True)
+    embed.add_field(name="🏛️ État", value=entry.get('State', 'N/A')[:10], inline=True)
+    embed.add_field(name="📮 Zip", value=entry.get('Zip', 'N/A')[:10], inline=True)
+    embed.add_field(name="🌍 Pays", value=entry.get('Country', 'N/A')[:30], inline=True)
+    embed.add_field(name="📞 Téléphone", value=entry.get('Phone', 'N/A')[:20], inline=True)
     
     if filter_name:
         embed.set_footer(text=f"Filtre: {filter_name} | Total: {total_filtered}")
@@ -289,7 +291,8 @@ async def stats(interaction: discord.Interaction):
     embed.add_field(name="📧 Domaines", value=str(len(domains)), inline=True)
     
     top_domains = "\n".join([f"`{d}`: {c}" for d, c in list(domains.items())[:10]])
-    embed.add_field(name="🏆 Top domaines", value=top_domains, inline=False)
+    if top_domains:
+        embed.add_field(name="🏆 Top domaines", value=top_domains, inline=False)
     
     await interaction.response.send_message(embed=embed)
 
